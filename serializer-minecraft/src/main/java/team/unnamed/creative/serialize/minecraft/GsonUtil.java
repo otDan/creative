@@ -51,7 +51,11 @@ public final class GsonUtil {
             return element.getAsBoolean();
         } else {
             // invalid value!
-            throw new IllegalStateException("Field '" + key + "' must be a boolean");
+            if (element.isJsonPrimitive() && ((JsonPrimitive) element).isString()
+                    && element.getAsString().equalsIgnoreCase("true")) {
+                return true;
+            }
+            return def;
         }
     }
 

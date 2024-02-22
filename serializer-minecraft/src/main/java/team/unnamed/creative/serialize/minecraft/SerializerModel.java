@@ -34,23 +34,11 @@ import team.unnamed.creative.base.CubeFace;
 import team.unnamed.creative.base.Vector2Float;
 import team.unnamed.creative.base.Vector3Float;
 import team.unnamed.creative.base.Vector4Float;
-import team.unnamed.creative.model.Element;
-import team.unnamed.creative.model.ElementFace;
-import team.unnamed.creative.model.ElementRotation;
-import team.unnamed.creative.model.ItemOverride;
-import team.unnamed.creative.model.ItemPredicate;
-import team.unnamed.creative.model.ItemTransform;
-import team.unnamed.creative.model.Model;
-import team.unnamed.creative.model.ModelTexture;
-import team.unnamed.creative.model.ModelTextures;
+import team.unnamed.creative.model.*;
 import team.unnamed.creative.util.Keys;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 final class SerializerModel implements JsonFileStreamWriter<Model>, JsonFileTreeReader.Keyed<Model> {
 
@@ -161,6 +149,14 @@ final class SerializerModel implements JsonFileStreamWriter<Model>, JsonFileTree
             }
         }
 
+        List<ItemGroup> groups = new ArrayList<>();
+        if (objectNode.has("groups")) {
+            for (JsonElement groupNode : objectNode.getAsJsonArray("groups")) {
+                if (groupNode.isJsonObject())
+                    groups.add(readItemGroup(groupNode));
+            }
+        }
+
         return Model.builder()
                 .key(key)
                 .parent(parent)
@@ -170,6 +166,7 @@ final class SerializerModel implements JsonFileStreamWriter<Model>, JsonFileTree
                 .textures(texture)
                 .guiLight(guiLight)
                 .overrides(overrides)
+                .groups(groups)
                 .build();
     }
 
@@ -344,6 +341,37 @@ final class SerializerModel implements JsonFileStreamWriter<Model>, JsonFileTree
         return ItemOverride.of(key, predicates);
     }
 
+    private static ItemGroup readItemGroup(JsonElement node) {
+        JsonObject objectNode = node.getAsJsonObject();
+        System.out.println("Reading Item Group: " + objectNode);
+
+        String name = "";
+        if (objectNode.has("name")) {
+            name = objectNode.get("name").getAsString();
+            System.out.println("Item Group Name: " + name);
+        }
+
+        Vector3Float origin = Vector3Float.ZERO;
+        if (objectNode.has("origin")) {
+            origin = readVector3Float(objectNode.get("origin"));
+            System.out.println("Item Group Origin: " + origin);
+        }
+
+        int color = 0;
+        if (objectNode.has("color")) {
+            color = objectNode.get("color").getAsInt();
+            System.out.println("Item Group Color: " + color);
+        }
+
+        List<Integer> children = new ArrayList<>();
+        if (objectNode.has("children")) {
+            children = readIntegerArray(objectNode.get("children"));
+            System.out.println("Item Group Children: " + Arrays.toString(children.toArray()));
+        }
+
+        return ItemGroup.of(name, origin, color, children);
+    }
+
     private static void writeItemTransform(JsonWriter writer, ItemTransform transform) throws IOException {
         writer.beginObject();
         Vector3Float rotation = transform.rotation();
@@ -409,7 +437,6 @@ final class SerializerModel implements JsonFileStreamWriter<Model>, JsonFileTree
     }
 
     private static ModelTextures readTextures(JsonElement node) {
-
         JsonObject objectNode = node.getAsJsonObject();
         ModelTexture particle = null;
         List<ModelTexture> layers = new ArrayList<>(objectNode.entrySet().size());
@@ -481,6 +508,25 @@ final class SerializerModel implements JsonFileStreamWriter<Model>, JsonFileTree
                 (float) array.get(2).getAsDouble(),
                 (float) array.get(3).getAsDouble()
         );
+    }
+
+    private static List<Integer> readIntegerArray(JsonElement element) {
+        List<Integer> integerList = new ArrayList<>();
+        JsonArray array = element.getAsJsonArray();
+        for (int i = 0; i < array.size() - 1; i++) {
+            JsonElement arrayElement = array.get(i);
+            if (arrayElement.isJsonObject()) {
+                try {
+                    int value = arrayElement.getAsInt();
+                    integerList.add(value);
+                }
+                catch (UnsupportedOperationException e) {
+                    e.printStackTrace();
+                    System.out.println();
+                }
+            }
+        }
+        return integerList;
     }
 
 }

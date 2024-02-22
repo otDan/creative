@@ -25,7 +25,9 @@ package team.unnamed.creative.serialize.minecraft;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.MalformedJsonException;
 import net.kyori.adventure.key.Key;
 import org.jetbrains.annotations.Nullable;
 import team.unnamed.creative.ResourcePack;
@@ -86,7 +88,11 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                 switch (tokens.poll()) {
                     case PACK_METADATA_FILE: {
                         // found pack.mcmeta file, deserialize and add
-                        Metadata metadata = SerializerMetadata.INSTANCE.readFromTree(parse(input));
+                        JsonElement element = parse(path, input);
+                        if (element == null) {
+                            continue;
+                        }
+                        Metadata metadata = SerializerMetadata.INSTANCE.readFromTree(element);
                         resourcePack.metadata(metadata);
                         continue;
                     }
@@ -147,9 +153,13 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                 // this means "category" is a file
                 // (remember: last tokens are always files)
                 if (category.equals(SOUNDS_FILE)) {
+                    JsonElement element = parse(path, input);
+                    if (element == null) {
+                        continue;
+                    }
                     // found a sound registry!
                     resourcePack.soundRegistry(SerializerSoundRegistry.INSTANCE.readFromTree(
-                            parse(input),
+                            element,
                             namespace
                     ));
                     continue;
@@ -172,8 +182,14 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                         // unknown
                         break;
                     }
+
+                    JsonElement element = parse(path, input);
+                    if (element == null) {
+                        continue;
+                    }
+
                     resourcePack.model(SerializerModel.INSTANCE.readFromTree(
-                            parse(input),
+                            element,
                             Key.key(namespace, keyValue)
                     ));
                     continue;
@@ -181,9 +197,18 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                 case TEXTURES_FOLDER: {
                     String keyOfMetadata = withoutExtension(categoryPath, METADATA_EXTENSION);
                     if (keyOfMetadata != null) {
+
+                        JsonElement element = parse(path, input);
+                        if (element == null) {
+                            continue;
+                        }
+                        if (!element.isJsonObject()) {
+                            continue;
+                        }
+
                         // found metadata for texture
                         Key key = Key.key(namespace, keyOfMetadata);
-                        Metadata metadata = SerializerMetadata.INSTANCE.readFromTree(parse(input));
+                        Metadata metadata = SerializerMetadata.INSTANCE.readFromTree(element);
 
                         Texture texture = incompleteTextures.remove(key);
                         if (texture == null) {
@@ -218,6 +243,7 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                         // unknown
                         break;
                     }
+
                     resourcePack.sound(Sound.File.of(
                             Key.key(namespace, keyValue),
                             writableFromInputStreamCopy(input)
@@ -230,8 +256,14 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                         // unknown
                         break;
                     }
+
+                    JsonElement element = parse(path, input);
+                    if (element == null) {
+                        continue;
+                    }
+
                     resourcePack.font(SerializerFont.INSTANCE.readFromTree(
-                            parse(input),
+                            element,
                             Key.key(namespace, keyValue)
                     ));
                     continue;
@@ -242,8 +274,14 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                         // unknown
                         break;
                     }
+
+                    JsonElement element = parse(path, input);
+                    if (element == null) {
+                        continue;
+                    }
+
                     resourcePack.language(SerializerLanguage.INSTANCE.readFromTree(
-                            parse(input),
+                            element,
                             Key.key(namespace, keyValue)
                     ));
                     continue;
@@ -254,8 +292,14 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
                         // unknown
                         break;
                     }
+
+                    JsonElement element = parse(path, input);
+                    if (element == null) {
+                        continue;
+                    }
+
                     resourcePack.blockState(SerializerBlockState.INSTANCE.readFromTree(
-                            parse(input),
+                            element,
                             Key.key(namespace, keyValue)
                     ));
                     continue;
@@ -301,11 +345,28 @@ final class MinecraftResourcePackReaderImpl implements MinecraftResourcePackRead
     }
 
     private static JsonReader reader(InputStream input) {
-        return new JsonReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+        JsonReader reader = null;
+        try {
+            reader = new JsonReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+        }
+        catch (JsonSyntaxException e) {
+            e.printStackTrace();
+        }
+        return reader;
     }
 
-    private static JsonElement parse(InputStream input) {
-        return PARSER.parse(reader(input));
+    private static JsonElement parse(String file, InputStream input) {
+        JsonElement element = null;
+        try {
+            JsonReader reader = reader(input);
+            if (reader == null)
+                return element;
+            element = PARSER.parse(reader);
+        } catch (Exception e) {
+            System.out.println("Failed file: " + file);
+            e.printStackTrace();
+        }
+        return element;
     }
 
 }

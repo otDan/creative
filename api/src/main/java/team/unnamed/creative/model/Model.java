@@ -77,6 +77,7 @@ public class Model implements Keyed, Examinable {
     @Nullable private final GuiLight guiLight;
     private final List<Element> elements;
     private final List<ItemOverride> overrides;
+    private final List<ItemGroup> groups;
 
     protected Model(
             Key key,
@@ -86,7 +87,8 @@ public class Model implements Keyed, Examinable {
             ModelTextures textures,
             @Nullable GuiLight guiLight,
             List<Element> elements,
-            List<ItemOverride> overrides
+            List<ItemOverride> overrides,
+            List<ItemGroup> groups
     ) {
         this.key = requireNonNull(key, "key");
         this.parent = parent;
@@ -95,7 +97,8 @@ public class Model implements Keyed, Examinable {
         this.textures = requireNonNull(textures, "textures");
         this.guiLight = guiLight;
         this.elements = requireNonNull(elements, "elements");
-        this.overrides = requireNonNull(overrides, "oveerrides");
+        this.overrides = requireNonNull(overrides, "overrides");
+        this.groups = requireNonNull(groups, "groups");
     }
 
     @Override
@@ -181,6 +184,8 @@ public class Model implements Keyed, Examinable {
         return overrides;
     }
 
+    public List<ItemGroup> groups() { return  groups; }
+
     /**
      * Enum of possible "gui_light" property
      * values
@@ -202,7 +207,8 @@ public class Model implements Keyed, Examinable {
                 ExaminableProperty.of("textures", textures),
                 ExaminableProperty.of("guiLight", guiLight),
                 ExaminableProperty.of("elements", elements),
-                ExaminableProperty.of("overrides", overrides)
+                ExaminableProperty.of("overrides", overrides),
+                ExaminableProperty.of("groups", groups)
         );
     }
 
@@ -245,6 +251,7 @@ public class Model implements Keyed, Examinable {
         private GuiLight guiLight;
         private List<Element> elements = Collections.emptyList();
         private List<ItemOverride> overrides = Collections.emptyList();
+        private List<ItemGroup> groups = Collections.emptyList();
 
         protected Builder() {
         }
@@ -301,10 +308,21 @@ public class Model implements Keyed, Examinable {
             return this;
         }
 
+        public Builder groups(List<ItemGroup> groups) {
+            this.groups = requireNonNull(groups, "groups");
+            return this;
+        }
+
+        public Builder groups(ItemGroup... groups) {
+            requireNonNull(groups, "groups");
+            this.groups = Arrays.asList(groups);
+            return this;
+        }
+
         public Model build() {
             return new Model(
                     key, parent, ambientOcclusion, display,
-                    textures, guiLight, elements, overrides
+                    textures, guiLight, elements, overrides, groups
             );
         }
 

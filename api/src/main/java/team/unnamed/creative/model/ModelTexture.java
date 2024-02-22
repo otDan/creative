@@ -64,4 +64,10 @@ public class ModelTexture {
         return new ModelTexture(null, reference);
     }
 
+    public static ModelTexture of(Key key, String reference) {
+        requireNonNull(reference, "reference");
+        requireNonNull(key, "key");
+        return new ModelTexture(key, reference);
+    }
+
 }
